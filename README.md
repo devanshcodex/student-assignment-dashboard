@@ -1,35 +1,72 @@
 # Assignment Desk
 
-Responsive student-assignment dashboard with Student and Professor (Admin) roles.
-Built with React 18, Tailwind CSS v4 and Vite. No backend: data lives in `localStorage`.
+A responsive student-assignment dashboard with two roles: **Student** and **Admin (Professor)**.
+Built with React, Tailwind CSS and Vite. There is no backend: all data is saved in `localStorage` and survives a page refresh.
 
-## Run
+**Live demo:** https://student-assignment-dashboard-iota.vercel.app/
+
+![Assignment Desk login screen](docs/screenshot.png)
+
+## Try it
+
+1. Open the live demo.
+2. Pick any demo user on the first screen. No password is needed.
+3. Try a student (for example **Aarav Singh**): submit an assignment using "Yes, I have submitted" and confirm in the dialog.
+4. Click **Switch user** and sign in as **Prof. Meera Sharma** to see the class completion bar and each student's status update.
+
+## Features
+
+**Student**
+- Sees only the assignments assigned to them
+- Title, description, due date, status and Drive link on every assignment
+- Two-step submission: "Yes, I have submitted", then a final confirmation dialog
+- Overall progress, for example "3 of 5 submitted", with a progress bar
+
+**Admin (Professor)**
+- Sees only the assignments they created
+- Create, edit and delete assignments, each with a Drive link
+- Assign to all students or to selected students
+- Class completion progress bar and every student's submitted / not submitted status
+
+**General**
+- Fully responsive on mobile and desktop
+- Loading, empty and error states (with a reset option if stored data is corrupt)
+- Search, status filter, sorting and overdue highlighting
+- Dark mode
+- Keyboard-accessible dialogs, labelled form fields and reduced-motion support
+
+## Tech stack
+
+- React 18 (hooks and Context API)
+- Tailwind CSS v4
+- Vite
+- Data: seeded JSON persisted to `localStorage`
+
+## Run locally
 
 ```bash
+git clone https://github.com/devanshcodex/student-assignment-dashboard.git
+cd student-assignment-dashboard
 npm install
 npm run dev
 ```
 
-## Demo users
-Pick any user on the first screen: 2 professors (Meera Sharma, Arjun Rao) and 5 students.
+Build for production with `npm run build`.
 
-## Structure
+## Project structure
+
 ```
 src/
-  components/  Header, Modal, ConfirmDialog, ProgressBar, StatusBadge, Toolbar, EmptyState, AssignmentForm
-  context/     AppContext.jsx  (state, localStorage persistence, actions)
-  data/        seed.js         (seeded users, assignments, submissions)
-  utils/       helpers.js      (dates, overdue check, search/filter/sort)
-  views/       Login, StudentDashboard, AdminDashboard
+  components/   Header, Modal, ConfirmDialog, ProgressBar, StatusBadge,
+                Toolbar, EmptyState, AssignmentForm
+  context/      AppContext.jsx   app state, localStorage persistence, actions
+  data/         seed.js          seeded users, assignments and submissions
+  utils/        helpers.js       date helpers, overdue check, search/filter/sort
+  views/        Login, StudentDashboard, AdminDashboard
+docs/           screenshot
 ```
 
-## Features
-- Role-based views; students see only assignments assigned to them, professors only those they created
-- Two-step submission: "Yes, I have submitted" then a confirmation dialog
-- Progress: "X of Y submitted" for students, class completion bar and per-student status for professors
-- Create / edit / delete assignments, assign to all or selected students, Drive link
-- Loading, empty and error states (reset button if stored data is corrupt)
-- Bonus: search, status filter, sorting, overdue highlighting, dark mode, keyboard-accessible native dialogs, labelled form fields, reduced-motion support
+## Notes
 
-## Reset data
-Clear the `assignment-desk:v1` key in DevTools > Application > Local Storage.
+- Data is stored in each visitor's own browser, so changes are not shared between people.
+- To reset the demo data, clear the `assignment-desk:v1` key in DevTools > Application > Local Storage.
