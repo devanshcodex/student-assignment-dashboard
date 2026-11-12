@@ -1,83 +1,96 @@
 import { useState } from 'react'
+import { api } from '../api/mockApi'
+import { useToast } from '../context/ToastContext'
+import { fromInputValue, toInputValue } from '../utils/dates'
+import { validateAssignment } from '../utils/validate'
+import Field from './Field'
 import Modal from './Modal'
-import { useApp } from '../context/AppContext'
 
-export default function AssignmentForm({ assignment, onClose }) {
-  const { user, students, saveAssignment } = useApp()
-  const [f, setF] = useState(
-    assignment || { title: '', description: '', dueDate: '', driveLink: '', assignedTo: 'all' }
-  )
+const types = [
+  ['individual', 'Individual', 'Every student acknowledges for themselves'],
+  ['group', 'Group', 'Only the group leader acknowledges'],
+]
+
+function initialValues(assignment) {
+  if (!assignment) return { title: '', description: '', deadline: '', driveLink: '', type: 'individual' }
+  return {
+    title: assignment.title,
+    description: assignment.description,
+    deadline: toInputValue(assignment.deadline),
+    driveLink: assignment.driveLink,
+    type: assignment.type,
+  }
+}
+
+export default function AssignmentForm({ courseId, assignment, onClose, onSaved }) {
+  const toast = useToast()
+  const [values, setValues] = useState(() => initialValues(assignment))
   const [errors, setErrors] = useState({})
-  const set = (k, v) => setF((x) => ({ ...x, [k]: v }))
+  const [busy, setBusy] = useState(false)
 
-  const toggleStudent = (id) => {
-    const cur = f.assignedTo === 'all' ? [] : f.assignedTo
-    set('assignedTo', cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id])
+  function change(e) {
+    const { name, value } = e.target
+    setValues((v) => ({ ...v, [name]: value }))
+    setErrors((er) => ({ ...er, [name]: undefined }))
   }
 
-  const submit = (e) => {
+  async function submit(e) {
     e.preventDefault()
-    const err = {}
-    if (!f.title.trim()) err.title = 'Enter a title.'
-    if (!f.dueDate) err.dueDate = 'Pick a due date.'
-    if (!/^https?:\/\/\S+$/.test(f.driveLink)) err.driveLink = 'Enter a full link starting with http:// or https://.'
-    if (f.assignedTo !== 'all' && f.assignedTo.length === 0) err.assignedTo = 'Select at least one student.'
-    setErrors(err)
-    if (Object.keys(err).length) return
-    saveAssignment({ ...f, title: f.title.trim(), id: f.id || `t${Date.now()}`, createdBy: user.id })
-    onClose()
-  }
+    const found = validateAssignment(values)
+    setErrors(found)
+    if (Object.keys(found).length) return
 
-  const Err = ({ k }) => errors[k] && <p role="alert" className="mt-1 text-xs text-rose-600">{errors[k]}</p>
+    setBusy(true)
+    const payload = { ...values, deadline: fromInputValue(values.deadline) }
+    try {
+      if (assignment) await api.updateAssignment(assignment.id, payload)
+      else await api.createAssignment(courseId, payload)
+      toast.success(assignment ? 'Assignment updated' : 'Assignment created')
+      onSaved()
+      onClose()
+    } catch (err) {
+      toast.error(err.message)
+      setBusy(false)
+    }
+  }
 
   return (
-    <Modal title={assignment ? 'Edit assignment' : 'Create assignment'} onClose={onClose}>
+    <Modal title={assignment ? 'Edit assignment' : 'New assignment'} onClose={onClose}>
       <form onSubmit={submit} noValidate className="space-y-3">
-        <div>
-          <label htmlFor="title" className="mb-1 block text-sm font-medium">Title</label>
-          <input id="title" className="input" value={f.title} onChange={(e) => set('title', e.target.value)} />
-          <Err k="title" />
-        </div>
-        <div>
-          <label htmlFor="desc" className="mb-1 block text-sm font-medium">Description</label>
-          <textarea id="desc" rows={3} className="input" value={f.description} onChange={(e) => set('description', e.target.value)} />
-        </div>
+        <Field label="Title" name="title" value={values.title} onChange={change} error={errors.title} />
+        <Field label="Description" name="description" as="textarea" rows={3} value={values.description} onChange={change} />
         <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <label htmlFor="due" className="mb-1 block text-sm font-medium">Due date</label>
-            <input id="due" type="date" className="input" value={f.dueDate} onChange={(e) => set('dueDate', e.target.value)} />
-            <Err k="dueDate" />
-          </div>
-          <div>
-            <label htmlFor="drive" className="mb-1 block text-sm font-medium">Drive link</label>
-            <input id="drive" type="url" placeholder="https://drive.google.com/..." className="input" value={f.driveLink} onChange={(e) => set('driveLink', e.target.value)} />
-            <Err k="driveLink" />
-          </div>
+          <Field label="Deadline" name="deadline" type="datetime-local" value={values.deadline} onChange={change} error={errors.deadline} />
+          <Field label="OneDrive link" name="driveLink" type="url" placeholder="https://1drv.ms/..." value={values.driveLink} onChange={change} error={errors.driveLink} />
         </div>
+
         <fieldset>
-          <legend className="mb-1 text-sm font-medium">Assign to</legend>
-          <div className="flex gap-4 text-sm">
-            <label className="flex items-center gap-1.5">
-              <input type="radio" name="scope" checked={f.assignedTo === 'all'} onChange={() => set('assignedTo', 'all')} /> All students
-            </label>
-            <label className="flex items-center gap-1.5">
-              <input type="radio" name="scope" checked={f.assignedTo !== 'all'} onChange={() => set('assignedTo', [])} /> Selected students
-            </label>
+          <legend className="mb-1 text-sm font-medium">Submission type</legend>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {types.map(([value, label, hint]) => (
+              <label
+                key={value}
+                className={`cursor-pointer rounded-lg border p-3 text-sm transition ${
+                  values.type === value
+                    ? 'border-slate-900 bg-slate-100 dark:border-white dark:bg-slate-800'
+                    : 'border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/50'
+                }`}
+              >
+                <span className="flex items-center gap-2 font-medium">
+                  <input type="radio" name="type" value={value} checked={values.type === value} onChange={change} />
+                  {label}
+                </span>
+                <span className="mt-1 block text-xs text-slate-500 dark:text-slate-400">{hint}</span>
+              </label>
+            ))}
           </div>
-          {f.assignedTo !== 'all' && (
-            <div className="mt-2 grid gap-1 sm:grid-cols-2">
-              {students.map((s) => (
-                <label key={s.id} className="flex items-center gap-1.5 text-sm">
-                  <input type="checkbox" checked={f.assignedTo.includes(s.id)} onChange={() => toggleStudent(s.id)} /> {s.name}
-                </label>
-              ))}
-            </div>
-          )}
-          <Err k="assignedTo" />
         </fieldset>
+
         <div className="flex justify-end gap-2 pt-2">
           <button type="button" className="btn" onClick={onClose}>Cancel</button>
-          <button type="submit" className="btn-primary">{assignment ? 'Save changes' : 'Create assignment'}</button>
+          <button className="btn-primary" disabled={busy}>
+            {busy ? 'Saving...' : assignment ? 'Save changes' : 'Create assignment'}
+          </button>
         </div>
       </form>
     </Modal>

@@ -1,72 +1,75 @@
-# Assignment Desk
+# Assignment & Review Dashboard
 
-A responsive student-assignment dashboard with two roles: **Student** and **Admin (Professor)**.
-Built with React, Tailwind CSS and Vite. There is no backend: all data is saved in `localStorage` and survives a page refresh.
+A role-based dashboard where professors post assignments for their courses and students acknowledge their submissions, individually or as a group. Built with React, Tailwind CSS and Vite. There is no real backend: a mock API backed by `localStorage` stands in for one, so data survives a refresh.
 
 **Live demo:** https://student-assignment-dashboard-iota.vercel.app/
 
-![Assignment Desk login screen](docs/screenshot.png)
+![Assignment & Review Dashboard](docs/screenshot.png)
 
-## Try it
+## Demo accounts
 
-1. Open the live demo.
-2. Pick any demo user on the first screen. No password is needed.
-3. Try a student (for example **Aarav Singh**): submit an assignment using "Yes, I have submitted" and confirm in the dialog.
-4. Click **Switch user** and sign in as **Prof. Meera Sharma** to see the class completion bar and each student's status update.
+All demo accounts use the password `password123`.
 
-## Features
+| Role | Email |
+| --- | --- |
+| Professor | meera@college.edu, arjun@college.edu |
+| Student | aarav@college.edu, diya@college.edu, kabir@college.edu, isha@college.edu, rohan@college.edu |
+
+You can also register a new account and choose either role.
+
+## What it does
+
+**Authentication**
+- Login and register forms with field-level validation and clear server errors
+- The user picks Student or Professor when registering, and each role lands on its own dashboard
+- The session is a JWT-shaped token stored in `localStorage` with a 2 hour expiry. Logging out clears it, protected routes redirect to `/login`, and a role cannot open the other role's pages
+
+**Professor**
+- Dashboard with a card for each course they teach (and a button to add a course)
+- Assignments page: create, edit and view assignments with title, description, deadline (date and time), OneDrive link and submission type (Individual or Group)
+- Per assignment: submitted count out of total (students or groups), a progress bar, and a drill-down of who has and hasn't submitted
+- Search by title and filter by deadline status
 
 **Student**
-- Sees only the assignments assigned to them
-- Title, description, due date, status and Drive link on every assignment
-- Two-step submission: "Yes, I have submitted", then a final confirmation dialog
-- Overall progress, for example "3 of 5 submitted", with a progress bar
+- Dashboard with cards for the courses they are enrolled in, each with a progress bar
+- Assignments page showing description, deadline, OneDrive link, submission type and acknowledgement status
+- Individual assignments: "Yes, I have submitted", then a confirmation dialog, and the timestamp is stored
+- Group assignments: only the group leader can acknowledge, and every member then sees "Acknowledged by [Leader] on [date and time]"
+- Students without a group see "You are not part of any group. Create or join one to submit this assignment." with a button to create or join one
+- Create a group (you become the leader) or join an existing one, and see the members and the leader
 
-**Admin (Professor)**
-- Sees only the assignments they created
-- Create, edit and delete assignments, each with a Drive link
-- Assign to all students or to selected students
-- Class completion progress bar and every student's submitted / not submitted status
+**Polish**
+- Progress bars, status badges and checkmarks, with overdue assignments highlighted
+- Toast messages, hover states, small transitions, skeleton loaders, empty states and retryable error states
+- Responsive from phone to desktop, dark mode, keyboard-friendly dialogs and labelled form fields
 
-**General**
-- Fully responsive on mobile and desktop
-- Loading, empty and error states (with a reset option if stored data is corrupt)
-- Search, status filter, sorting and overdue highlighting
-- Dark mode
-- Keyboard-accessible dialogs, labelled form fields and reduced-motion support
+## Tech
 
-## Tech stack
-
-- React 18 (hooks and Context API)
-- Tailwind CSS v4
-- Vite
-- Data: seeded JSON persisted to `localStorage`
+React 18, React Router 6, Tailwind CSS v4, Vite. State is local component state plus two small contexts (auth and toasts).
 
 ## Run locally
 
 ```bash
-git clone https://github.com/devanshcodex/student-assignment-dashboard.git
-cd student-assignment-dashboard
 npm install
 npm run dev
 ```
 
-Build for production with `npm run build`.
-
-## Project structure
+## Structure
 
 ```
 src/
-  components/   Header, Modal, ConfirmDialog, ProgressBar, StatusBadge,
-                Toolbar, EmptyState, AssignmentForm
-  context/      AppContext.jsx   app state, localStorage persistence, actions
-  data/         seed.js          seeded users, assignments and submissions
-  utils/        helpers.js       date helpers, overdue check, search/filter/sort
-  views/        Login, StudentDashboard, AdminDashboard
-docs/           screenshot
+  api/          mockApi.js (all endpoints, token handling, rules), seed.js
+  components/   reusable UI: Modal, Field, Badge, ProgressBar, cards, forms, route guards
+  context/      AuthContext, ToastContext
+  hooks/        useAsync (loading / error / reload), useTheme
+  pages/        Login, Register, Professor and Student dashboards and course pages
+  utils/        dates.js, validate.js
 ```
 
-## Notes
+## Notes on the mock API
 
-- Data is stored in each visitor's own browser, so changes are not shared between people.
-- To reset the demo data, clear the `assignment-desk:v1` key in DevTools > Application > Local Storage.
+- Every call waits about 300 ms and reads the stored database fresh, so loading states are real
+- The rules live in the API, not the UI: students can only open courses they are enrolled in, only a group leader can acknowledge a group assignment, and the submission type cannot change once someone has acknowledged
+- New students are enrolled in all courses of the semester, and a course created by a professor enrolls all students
+- Passwords are lightly hashed and the token is not cryptographically signed. This is a mock, not real security
+- To reset the demo data, clear `ard.db` and `ard.token` in DevTools > Application > Local Storage

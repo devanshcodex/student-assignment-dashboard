@@ -1,9 +1,13 @@
 import { useEffect, useRef } from 'react'
 
-// Native <dialog>: gives focus trapping, Esc to close and aria-modal for free.
+// Uses the native <dialog>, so focus trapping and Esc to close come for free.
 export default function Modal({ title, onClose, children }) {
   const ref = useRef(null)
-  useEffect(() => { ref.current.showModal() }, [])
+
+  useEffect(() => {
+    ref.current.showModal()
+  }, [])
+
   return (
     <dialog
       ref={ref}

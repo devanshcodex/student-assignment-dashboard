@@ -1,38 +1,52 @@
-import { useApp } from './context/AppContext'
-import Header from './components/Header'
-import Login from './views/Login'
-import StudentDashboard from './views/StudentDashboard'
-import AdminDashboard from './views/AdminDashboard'
+import { Link, Navigate, Route, Routes } from 'react-router-dom'
+import Layout from './components/Layout'
+import { GuestRoute, ProtectedRoute } from './components/RouteGuards'
+import { PageLoader } from './components/Skeleton'
+import { homePath, useAuth } from './context/AuthContext'
+import Login from './pages/Login'
+import ProfessorCourse from './pages/ProfessorCourse'
+import ProfessorDashboard from './pages/ProfessorDashboard'
+import Register from './pages/Register'
+import StudentCourse from './pages/StudentCourse'
+import StudentDashboard from './pages/StudentDashboard'
+
+function Home() {
+  const { user, ready } = useAuth()
+  if (!ready) return <PageLoader />
+  return <Navigate to={user ? homePath(user.role) : '/login'} replace />
+}
+
+function NotFound() {
+  return (
+    <div className="px-4 py-24 text-center">
+      <p className="text-2xl font-bold">Page not found</p>
+      <Link to="/" className="btn mt-4">Back to home</Link>
+    </div>
+  )
+}
 
 export default function App() {
-  const { status, user, reset } = useApp()
-
-  let body
-  if (status === 'loading') {
-    body = (
-      <div role="status" className="flex items-center justify-center gap-3 py-24 text-slate-500">
-        <span className="size-5 animate-spin rounded-full border-2 border-slate-300 border-t-slate-900 dark:border-slate-700 dark:border-t-white" />
-        Loading your assignments
-      </div>
-    )
-  } else if (status === 'error') {
-    body = (
-      <div role="alert" className="mx-auto max-w-md px-4 py-20 text-center">
-        <p className="font-semibold">Saved data couldn't be read</p>
-        <p className="mt-1 text-sm text-slate-500">The stored data is damaged. Reset to restore the demo data.</p>
-        <button className="btn-primary mt-4" onClick={reset}>Reset demo data</button>
-      </div>
-    )
-  } else if (!user) {
-    body = <Login />
-  } else {
-    body = user.role === 'admin' ? <AdminDashboard /> : <StudentDashboard />
-  }
-
   return (
-    <>
-      <Header />
-      {body}
-    </>
+    <Routes>
+      <Route path="/" element={<Home />} />
+
+      <Route element={<GuestRoute />}>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+      </Route>
+
+      <Route element={<Layout />}>
+        <Route element={<ProtectedRoute role="professor" />}>
+          <Route path="/professor" element={<ProfessorDashboard />} />
+          <Route path="/professor/courses/:courseId" element={<ProfessorCourse />} />
+        </Route>
+        <Route element={<ProtectedRoute role="student" />}>
+          <Route path="/student" element={<StudentDashboard />} />
+          <Route path="/student/courses/:courseId" element={<StudentCourse />} />
+        </Route>
+      </Route>
+
+      <Route path="*" element={<NotFound />} />
+    </Routes>
   )
 }
